@@ -1,6 +1,6 @@
 import { ghost } from './ui';
 
-export default function InventoryHeader({ title, subtitle, onHome, dark, onToggleTheme, onLockNow }) {
+export default function InventoryHeader({ title, subtitle, onHome, dark, onToggleTheme, lockEnabled, onLockNow }) {
   return (
     <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3">
@@ -13,7 +13,7 @@ export default function InventoryHeader({ title, subtitle, onHome, dark, onToggl
           </div>
         </div>
         <div className="flex gap-2">
-          <button onClick={onLockNow} className={`${ghost} !min-h-10 !px-3`}>Lock now</button>
+          {lockEnabled && <button onClick={onLockNow} className={`${ghost} !min-h-10 !px-3`}>Lock now</button>}
           <button onClick={onToggleTheme} className={`${ghost} !min-h-10 !px-3`}>{dark ? 'Light mode' : 'Dark mode'}</button>
         </div>
       </div>

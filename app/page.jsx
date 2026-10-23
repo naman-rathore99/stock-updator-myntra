@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import CAT0 from '../lib/catalog.json';
 import InventoryDialogs from './components/InventoryDialogs';
 import InventoryHeader from './components/InventoryHeader';
+import InventoryList from './components/InventoryList';
 import InventoryOverview from './components/InventoryOverview';
 import OtherInventory from './components/OtherInventory';
 import ReturnsInventory from './components/ReturnsInventory';
@@ -159,6 +160,28 @@ export default function Page() {
     });
     return result;
   }, [cat, stock, customItems]);
+  const inventoryItems = useMemo(() => {
+    const result = [];
+    Object.entries(cat).forEach(([style, colors]) => colors.forEach(([color, items]) => items.forEach((item, index) => {
+      if (item) result.push({
+        code: item[0],
+        group: style,
+        name: styleNames[style] || `Style ${style}`,
+        color,
+        size: SIZES[index],
+        quantity: stock[item[0]] ?? '',
+      });
+    })));
+    customItems.forEach((item) => result.push({
+      code: item.c,
+      group: 'Other',
+      name: 'Other items',
+      color: '',
+      size: '',
+      quantity: item.q,
+    }));
+    return result;
+  }, [cat, styleNames, stock, customItems]);
   const total = rows.reduce((sum, row) => sum + row[1], 0);
   const csv = `${csvCell(format.sku)},${csvCell(format.quantity)}\r\n` +
     rows.map((row) => `${csvCell(row[0])},${csvCell(row[1])}`).join('\r\n') + '\r\n';
@@ -453,17 +476,8 @@ export default function Page() {
   };
   const list = tab !== 'Other' && tab !== 'Returns' ? cat[tab] || [] : [];
   const isHome = screen === 'home';
-  const currentTitle = tab === 'Other' ? 'Other items' : tab === 'Returns' ? 'Returned items' : styleNames[tab] || `Style ${tab}`;
-  const styleCards = Object.keys(cat).map((style) => {
-    const codes = cat[style].flatMap(([, items]) => items.filter(Boolean));
-    return {
-      value: style,
-      name: styleNames[style],
-      colorCount: cat[style].length,
-      skuCount: codes.length,
-      filled: codes.filter((item) => hasStock(item[0])).length,
-    };
-  });
+  const isAllInventory = screen === 'inventory-list';
+  const currentTitle = isAllInventory ? 'All inventory' : tab === 'Other' ? 'Other items' : tab === 'Returns' ? 'Returned items' : styleNames[tab] || `Style ${tab}`;
 
   const setupLock = (hash, minutes) => {
     localStorage.setItem('uiLockMinutes1', String(minutes));
@@ -471,6 +485,7 @@ export default function Page() {
     setLockHash(hash);
     setLockMinutes(minutes);
     setLocked(false);
+    setLockSettingsOpen(false);
   };
   const saveLockMinutes = (minutes) => {
     localStorage.setItem('uiLockMinutes1', String(minutes));
@@ -481,15 +496,13 @@ export default function Page() {
     localStorage.removeItem('uiLockHash1');
     setLockHash('');
     setLocked(false);
+    setLockSettingsOpen(false);
   };
 
   if (!ready || lockHash === null) return <main className="p-6 text-center text-slate-500">Loading stockroom…</main>;
-  if (!lockHash || locked) {
+  if (lockHash && locked) {
     return <LockScreen
-      configured={Boolean(lockHash)}
       expectedHash={lockHash}
-      minutes={lockMinutes}
-      onSetup={setupLock}
       onUnlock={() => setLocked(false)}
       onReset={resetLock}
     />;
@@ -502,10 +515,11 @@ export default function Page() {
           total={total}
           skuCount={rows.length}
           styleCount={Object.keys(cat).length}
-          styles={styleCards}
+          inventoryCount={inventoryItems.length}
           customCount={customItems.length}
           returnCount={returns.length}
           onSelect={(value) => { setTab(value); setScreen('inventory'); }}
+          onViewInventory={() => setScreen('inventory-list')}
           onGenerateRange={() => { setRangeError(''); setRangeForm({ start: '', end: '', name: '', colors: '', skuPattern: '' }); }}
           onAddStyle={() => { setError(''); setNewStyle(''); }}
           onResetCatalog={() => confirmTwice('rc', resetCatalog)}
@@ -514,6 +528,7 @@ export default function Page() {
           onShareApp={shareApp}
           dark={dark}
           onToggleTheme={() => setDark((value) => !value)}
+          lockEnabled={Boolean(lockHash)}
           onLockNow={() => setLocked(true)}
           onLockSettings={() => setLockSettingsOpen(true)}
         />
@@ -521,14 +536,22 @@ export default function Page() {
         <>
           <InventoryHeader
             title={currentTitle}
-            subtitle={tab !== 'Other' && tab !== 'Returns' ? styleNames[tab] : ''}
+            subtitle={!isAllInventory && tab !== 'Other' && tab !== 'Returns' ? styleNames[tab] : ''}
             onHome={() => setScreen('home')}
             dark={dark}
             onToggleTheme={() => setDark((value) => !value)}
+            lockEnabled={Boolean(lockHash)}
             onLockNow={() => setLocked(true)}
           />
-          <main key={tab} className="mx-auto max-w-5xl p-4 pb-32 content-enter">
-            {tab !== 'Other' && tab !== 'Returns' ? (
+          {isAllInventory ? (
+            <InventoryList
+              items={inventoryItems}
+              total={total}
+              onSelect={(value) => { setTab(value); setScreen('inventory'); }}
+            />
+          ) : (
+            <main key={tab} className="mx-auto max-w-5xl p-4 pb-32 content-enter">
+              {tab !== 'Other' && tab !== 'Returns' ? (
           <StyleInventory
             tab={tab}
             styleName={styleNames[tab]}
@@ -572,7 +595,7 @@ export default function Page() {
             onClear={() => confirmTwice('ca', clearAll)}
             onReset={() => confirmTwice('rc', resetCatalog)}
           />
-            ) : (
+              ) : (
           <ReturnsInventory
             returns={returns}
             form={returnForm}
@@ -581,8 +604,9 @@ export default function Page() {
             onRestock={restockReturn}
             locationForCode={returnLocation}
           />
-        )}
-          </main>
+              )}
+            </main>
+          )}
         </>
       )}
 
@@ -635,9 +659,12 @@ export default function Page() {
       )}
       {lockSettingsOpen && (
         <LockSettings
+          configured={Boolean(lockHash)}
           minutes={lockMinutes}
           onClose={() => setLockSettingsOpen(false)}
+          onEnable={setupLock}
           onSave={saveLockMinutes}
+          onDisable={resetLock}
         />
       )}
     </>

@@ -1,8 +1,8 @@
 # Myntra Stock Manager (Next.js + Tailwind)
 
-The app opens on a home screen with searchable inventory cards. Choose a style, Other items, or Returns to open that section; use **Home** to return to the overview. Select **Dark mode** or **Light mode** from the home or inventory screen.
+The app opens on a home screen with summary counts and links. Open **View all inventory** to see every catalog SKU and quantity in one searchable list; select a SKU to edit its style or other-item group. Returns remain a separate section. Use **Home** to return to the overview. Select **Dark mode** or **Light mode** from the home or inventory screen.
 
-On first use, set a 4–8 digit browser PIN. The app locks when reopened and after four minutes without interaction; change the inactivity timeout from **Lock settings** (1–60 minutes), or lock immediately with **Lock now**. The PIN and timeout are local to that browser and do not sync. This is a UI privacy lock, not account authentication: someone with access to browser storage or developer tools can bypass it. **Forgot PIN? Reset browser lock** clears only the PIN, not inventory data.
+The browser PIN lock is optional. Enable it from the home screen to set a 4–8 digit PIN. When enabled, the app locks after four minutes without interaction or when reopened; adjust the timeout from **Lock settings** (1–60 minutes), or lock immediately with **Lock now**. The PIN and timeout are local to that browser and do not sync. This is a UI privacy lock, not account authentication: someone with access to browser storage or developer tools can bypass it. Disable it any time in lock settings; **Forgot PIN? Reset browser lock** clears only the PIN, not inventory data.
 
 Enter stock per style/color/size, then tap **Save & generate file** to download a CSV. Empty boxes are skipped. You can enter final quantities directly, increment with **+1**, or add notes such as `S=1, M=2, S=1` (which adds 2 to S and 2 to M).
 
@@ -22,4 +22,4 @@ Deploy: push to GitHub and import in Vercel (zero config).
   Format: `{ style: [[color, [[code, prefillQty] | null x5 for S,M,L,XL,XXL]]] }`. Add new styles/colors here.
 - Data is stored in the browser (localStorage). To sync across devices, replace the two `useEffect` blocks in `app/page.jsx` with API/database calls.
 - The UI lock also uses browser localStorage and does not restrict access to any connected spreadsheet.
-- UI components are in `app/components/`: `InventoryOverview`, `StyleInventory`, `OtherInventory`, `ReturnsInventory`, `StyleRangeDialog`, `InventoryDialogs`, and shared styles/modal in `ui.jsx`. Numeric range creation is in `lib/style-range.mjs`.
+- UI components are in `app/components/`: `InventoryOverview`, `InventoryList`, `StyleInventory`, `OtherInventory`, `ReturnsInventory`, `StyleRangeDialog`, `InventoryDialogs`, and shared styles/modal in `ui.jsx`. Numeric range creation is in `lib/style-range.mjs`.
